@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Threat Modeling Lab - STRIDE e DREAD</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--line:#2d3646;--tx:#e6edf3;--mut:#9aa7b8;--acc:#4da3ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;margin-right:auto}header h1 small{color:var(--mut);font-weight:400;margin-left:8px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-align:center;min-width:92px}
+.kpi b{display:block;font-size:18px}.kpi span{color:var(--mut);font-size:11px}
+input[type=text],select,textarea{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;width:100%}
+header input{width:190px}
+button{background:var(--acc);color:#04111f;border:0;border-radius:6px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+button.sec{background:var(--panel2);color:var(--tx);border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,.cell:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+nav{display:flex;gap:6px;padding:10px 12px 0;flex-wrap:wrap}
+nav button{background:var(--panel2);color:var(--mut);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0}
+nav button.on{background:var(--panel);color:var(--tx);border-color:var(--acc)}
+main{padding:0 12px 16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:14px}
+h2{font-size:17px;margin:0 0 4px}h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:16px 0 6px}
+p.lead{color:var(--mut);margin:0 0 10px}
+details{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:10px}summary{cursor:pointer;font-weight:600}
+details ul{margin:6px 0 2px;padding-left:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:var(--panel2)}
+.card.top{border-color:var(--warn)}
+.chip{display:inline-block;border-radius:10px;padding:0 8px;font-size:11px;border:1px solid var(--line);color:var(--mut);margin-right:4px}
+.chip.ok{color:var(--ok);border-color:var(--ok)}.chip.no{color:var(--bad);border-color:var(--bad)}
+.mut{color:var(--mut)}.good{color:var(--ok)}.badc{color:var(--bad)}.err{color:var(--bad);margin:6px 0}
+table.mx{border-collapse:collapse;width:100%;font-size:12.5px}
+.mx th{padding:4px 6px;color:var(--mut);font-weight:500;text-align:center}.mx th.l{text-align:left}
+.mx td{border:1px solid var(--line);text-align:center;padding:0}
+.cell{display:block;width:100%;padding:5px 0;cursor:pointer;background:none;color:var(--tx);border:0;font-weight:400;border-radius:0}
+.cell.has{background:#12301b;color:var(--ok);font-weight:700}.cell.sel{outline:2px solid var(--acc);outline-offset:-2px}
+td.na{color:#4a5568;padding:5px 0}
+.sl{display:grid;grid-template-columns:150px 1fr 34px;gap:8px;align-items:center;margin:4px 0}
+.sl input[type=range]{width:100%}
+.score{font-size:20px;font-weight:700}
+.warn{background:#2a2410;border:1px solid var(--warn);border-radius:8px;padding:8px 10px;color:#f0d98a;font-size:13px;margin-bottom:10px}
+svg{width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+svg .box{fill:var(--panel2);stroke:var(--acc);stroke-width:1.5}svg .ext{fill:var(--panel2);stroke:var(--mut);stroke-width:1.5}
+svg .ln{stroke:var(--mut);stroke-width:1.5;fill:none;marker-end:url(#ar)}svg .ln.bi{marker-start:url(#ar)}
+svg .bd{fill:none;stroke:var(--warn);stroke-width:1.5;stroke-dasharray:6 4}svg text{fill:var(--tx);font:12px system-ui,sans-serif}
+svg text.s{fill:var(--mut);font-size:11px}svg text.b{fill:var(--warn);font-size:11px}
+dialog{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:12px;max-width:780px;width:92vw;max-height:88vh;overflow:auto}dialog::backdrop{background:#000a}
+table.st{width:100%;border-collapse:collapse}table.st td,table.st th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Threat Modeling Lab<small>STRIDE + DREAD - OrbitaPay Mobile (fictício)</small></h1>
+  <input type="text" id="analyst" placeholder="Seu nome / RM (opcional)" aria-label="Nome" maxlength="60" autocomplete="off">
+  <div class="kpi"><b id="kTh">0</b><span>Ameaças</span></div>
+  <div class="kpi"><b id="kCe">0/42</b><span>Células STRIDE</span></div>
+  <div class="kpi"><b id="kTop">0/3</b><span>Top-3 DREAD</span></div>
+  <button class="sec" id="bRep">Relatório</button>
+  <button id="bDeb">Debrief</button>
+  <button class="sec" id="bRst">Reiniciar</button>
+</header>
+<nav id="tabs" role="tablist"></nav>
+<main><section class="panel" id="view" aria-live="polite"></section></main>
+<dialog id="dlg"></dialog>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+function h(tag,props,...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(props||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v);}for(const k of kids.flat()){if(k!=null)e.append(k);}return e;}
+const SVGNS='http://www.w3.org/2000/svg';
+
+/* ===== Modelo ===== */
+const CAT={S:['Spoofing','Falsificação de identidade','Autenticação','Alguém pode se passar por outro usuário, serviço ou sistema?'],
+ T:['Tampering','Adulteração','Integridade','Alguém pode alterar dados, código ou mensagens sem ser percebido?'],
+ R:['Repudiation','Repúdio','Não repúdio','Alguém pode negar uma ação e não haver prova de que a fez?'],
+ I:['Information disclosure','Vazamento de informação','Confidencialidade','Que dado sensível pode ser visto por quem não deveria?'],
+ D:['Denial of service','Negação de serviço','Disponibilidade','Como tornar o componente indisponível ou lento demais?'],
+ E:['Elevation of privilege','Elevação de privilégio','Autorização','Como ganhar permissões que não deveria ter?']};
+const EL=[
+ {id:'e1',n:'App Mobile (Flutter)',k:'processo',c:'STRIDE'},{id:'e2',n:'API Gateway',k:'processo',c:'STRIDE'},{id:'e3',n:'Serviço de Autenticação',k:'processo',c:'STRIDE'},
+ {id:'e4',n:'Serviço de Pagamentos',k:'processo',c:'STRIDE'},{id:'e5',n:'Portal Admin (backoffice)',k:'processo',c:'STRIDE'},
+ {id:'e6',n:'Banco de Dados (PostgreSQL)',k:'repositório de dados',c:'TRID'},{id:'e7',n:'PSP externo (processador)',k:'entidade externa',c:'SR'},
+ {id:'e8',n:'Fluxo App ⇄ API Gateway (internet)',k:'fluxo de dados',c:'TID'},{id:'e9',n:'Fluxo Pagamentos ⇄ PSP',k:'fluxo de dados',c:'TID'}];
+const TOTAL_CELLS=EL.reduce((s,e)=>s+e.c.length,0);
+/* Referência (gabarito): [id, elemento, categoria, ameaça, mitigação, DREAD[D,R,E,A,D]] */
+const REF=[
+ ['R1','e1','I','Tokens e dados pessoais guardados em armazenamento inseguro (ex.: SharedPreferences) ou impressos em logs; em aparelho com root/jailbreak o atacante lê tudo.','flutter_secure_storage; não logar dados sensíveis; detectar root/jailbreak; logout limpa tokens e cache.',[7,8,6,5,7]],
+ ['R2','e1','T','App adulterado/reempacotado ou instrumentado (ex.: Frida) para desligar certificate pinning e manipular requisições.','Certificate pinning; verificação de integridade do app (Play Integrity / App Attest); ofuscação; validação sempre no servidor.',[6,6,5,6,6]],
+ ['R3','e8','I','Interceptação (MITM) em Wi-Fi público se a validação de certificado estiver desativada ou o TLS for fraco.','TLS 1.2+ obrigatório, HSTS, certificate pinning, nunca aceitar certificado inválido.',[8,6,5,6,7]],
+ ['R4','e2','D','Inundação de requisições (DoS) ou abuso de endpoints caros, sem limite de taxa.','Rate limiting, WAF, quotas por cliente, autoscaling e circuit breakers.',[6,9,8,9,8]],
+ ['R5','e3','S','Credential stuffing / força bruta no login e reaproveitamento de senhas vazadas para tomar contas.','Rate limiting por IP e conta, lockout progressivo, MFA, detecção de login anômalo, senha forte.',[8,9,7,8,8]],
+ ['R6','e3','E','Token (JWT) forjado ou alterado (alg=none, chave fraca, claim de papel manipulável) para virar administrador.','Algoritmo fixado (RS256/ES256), validar assinatura, exp, iss e aud; autorização (RBAC) no servidor, nunca pelo cliente.',[9,7,5,9,6]],
+ ['R7','e4','T','Cliente altera valor, conta de origem ou destinatário no request; falta de autorização por objeto (IDOR) permite mexer em pagamentos de outros usuários.','Validar e autorizar tudo no servidor, checar dono do recurso (ASVS), assinar/validar payload, limites e antifraude.',[9,9,7,7,8]],
+ ['R8','e4','R','Usuário nega ter feito uma transferência e não há prova confiável do que aconteceu.','Trilha de auditoria imutável, idempotency key, confirmação forte (MFA) em operações sensíveis, logs com correlation id.',[6,5,4,6,5]],
+ ['R9','e4','E','Endpoint de estorno acessível a usuário comum (falha de autorização por função).','Autorização por função em TODAS as rotas, deny by default, testes de autorização automatizados.',[9,8,6,8,6]],
+ ['R10','e6','I','Vazamento de PII e dados financeiros por SQL injection, backup exposto ou falta de criptografia em repouso.','Queries parametrizadas, criptografia em repouso e em trânsito, backups criptografados, menor privilégio, mascaramento.',[10,7,6,10,6]],
+ ['R11','e6','T','Conta única de aplicação com privilégios excessivos permite alterar ou apagar dados em massa se um serviço for comprometido.','Uma conta por serviço com privilégio mínimo, separação de leitura/escrita, auditoria de DDL/DML.',[8,6,5,8,5]],
+ ['R12','e7','S','Webhook falso, fingindo ser o PSP, confirma pagamentos que nunca aconteceram.','Assinatura (HMAC) do webhook, allowlist de IP, reconsulta do status na API do PSP, idempotência.',[9,8,6,6,6]],
+ ['R13','e9','I','Dados de cartão ou tokens trafegam ou são logados em claro entre Pagamentos e PSP.','Tokenização, mTLS, reduzir escopo PCI, nunca registrar PAN em logs.',[9,5,4,7,5]],
+ ['R14','e5','S','Portal administrativo exposto à internet com login simples; phishing do operador entrega acesso total.','MFA obrigatório, acesso por VPN/zero trust, allowlist, contas individuais, alerta de login incomum.',[10,7,6,8,6]],
+ ['R15','e5','R','Operadores compartilham a conta "backoffice": estornos e consultas não podem ser atribuídos a ninguém.','Contas nominais, log de ações administrativas imutável, revisão periódica de acessos.',[6,6,4,4,4]],
+ ['R16','e2','I','Mensagens de erro detalhadas (stack trace, versões, nomes internos) ajudam o atacante a mapear o sistema.','Erros genéricos ao cliente, detalhes só em log interno, remover banners de versão.',[4,9,8,7,8]]
+];
+const REF_TOP=['R4','R5','R7','R10']; // faixa de maior risco pela média DREAD (empate técnico)
+const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const DREAD=[['Damage (dano)','Quão grave seria o estrago se o ataque desse certo?'],['Reproducibility (reprodutibilidade)','Quão fácil é repetir o ataque?'],['Exploitability (explorabilidade)','Quanto esforço/habilidade o atacante precisa?'],['Affected users (usuários afetados)','Quantos usuários seriam atingidos?'],['Discoverability (descoberta)','Quão fácil é descobrir a falha?']];
+const band=x=>x>=7?['Alto','badc']:x>=4?['Médio','']:['Baixo','good'];
+const elName=id=>EL.find(e=>e.id===id).n;
+
+/* ===== Estado ===== */
+let S;function fresh(){S={tab:0,th:[],top:[],dr:{},n:0,sel:null,msg:'',cmp:false};}fresh();
+const cells=()=>new Set(S.th.map(t=>t.el+t.cat)).size;
+function kpis(){$('#kTh').textContent=S.th.length;$('#kCe').textContent=`${cells()}/${TOTAL_CELLS}`;$('#kTop').textContent=`${S.top.length}/3`;}
+function tabs(){const t=$('#tabs');t.replaceChildren();['Especificação','1 STRIDE','2 DREAD','3 Comparar'].forEach((l,i)=>t.append(h('button',{class:S.tab===i?'on':'',role:'tab','aria-selected':S.tab===i?'true':'false',onclick:()=>{S.tab=i;render();}},l)));}
+function render(){tabs();kpis();const v=$('#view');v.replaceChildren();[spec,stride,dread,compare][S.tab](v);}
+
+/* ===== Especificação + DFD ===== */
+function dfd(){
+  const svg=document.createElementNS(SVGNS,'svg');svg.setAttribute('viewBox','0 0 900 430');svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Diagrama de fluxo de dados da OrbitaPay Mobile: cliente, app, API Gateway, serviços de autenticação e pagamentos, banco de dados, portal admin, operador e PSP externo, com duas fronteiras de confiança.');
+  svg.innerHTML=`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa7b8"/></marker></defs>
+  <rect class="bd" x="125" y="115" width="175" height="165"/><text class="b" x="133" y="132">Fronteira 1: dispositivo</text>
+  <rect class="bd" x="355" y="30" width="360" height="380"/><text class="b" x="363" y="48">Fronteira 2: nuvem OrbitaPay</text>
+  <rect class="ext" x="10" y="170" width="95" height="60" rx="4"/><text x="57" y="205" text-anchor="middle">Cliente</text>
+  <rect class="box" x="145" y="170" width="130" height="60" rx="8"/><text x="210" y="196" text-anchor="middle">App Mobile</text><text class="s" x="210" y="212" text-anchor="middle">(Flutter)</text>
+  <rect class="box" x="385" y="170" width="110" height="60" rx="8"/><text x="440" y="206" text-anchor="middle">API Gateway</text>
+  <rect class="box" x="560" y="70" width="130" height="60" rx="8"/><text x="625" y="96" text-anchor="middle">Serviço de</text><text x="625" y="112" text-anchor="middle">Autenticação</text>
+  <rect class="box" x="560" y="170" width="130" height="60" rx="8"/><text x="625" y="196" text-anchor="middle">Serviço de</text><text x="625" y="212" text-anchor="middle">Pagamentos</text>
+  <path class="ext" d="M560 305H690M560 355H690" stroke="#9aa7b8" stroke-width="1.5" fill="none"/><text x="625" y="335" text-anchor="middle">Banco de Dados</text>
+  <rect class="box" x="385" y="305" width="110" height="60" rx="8"/><text x="440" y="331" text-anchor="middle">Portal Admin</text><text class="s" x="440" y="347" text-anchor="middle">(backoffice)</text>
+  <rect class="ext" x="150" y="320" width="100" height="50" rx="4"/><text x="200" y="350" text-anchor="middle">Operador</text>
+  <rect class="ext" x="780" y="170" width="110" height="60" rx="4"/><text x="835" y="196" text-anchor="middle">PSP externo</text><text class="s" x="835" y="212" text-anchor="middle">(processador)</text>
+  <path class="ln" d="M105 200H145"/><path class="ln bi" d="M275 200H385"/><text class="s" x="330" y="190" text-anchor="middle">F1 HTTPS</text>
+  <path class="ln" d="M495 185L560 110"/><path class="ln" d="M495 200H560"/><path class="ln" d="M625 230V305"/>
+  <path class="ln bi" d="M690 200H780"/><text class="s" x="735" y="190" text-anchor="middle">F2 + webhook</text>
+  <path class="ln" d="M250 345H385"/><path class="ln" d="M440 305V230" /><path class="ln" d="M495 335H560"/>
+  <path class="ln" d="M625 130V170" /><text class="s" x="635" y="152">JWT</text>`;
+  return svg;}
+function spec(v){
+  v.append(h('h2',null,'Especificação do sistema'),h('p',{class:'lead'},'Você é a pessoa de segurança do time antes de o código existir (Security by Design). Leia a especificação e o diagrama; na próxima aba você vai modelar as ameaças.'),
+   h('div',{class:'grid2'},
+    h('div',null,h('h3',null,'OrbitaPay Mobile (fictício)'),
+     h('p',null,'App de pagamentos e transferências instantâneas entre usuários, para iOS e Android.'),
+     h('ul',null,
+      h('li',null,'Cadastro e login com e-mail e senha; MFA por SMS é opcional.'),
+      h('li',null,'Após o login, o Serviço de Autenticação emite um JWT (access token de 15 min e refresh token de 7 dias). O app guarda o token para "manter o usuário logado".'),
+      h('li',null,'Todo tráfego do app passa pelo API Gateway, que repassa as chamadas aos serviços e devolve ao cliente a mensagem de erro do serviço quando algo falha.'),
+      h('li',null,'Para pagar, o app envia POST /payments com valor, conta de origem e destinatário. O Serviço de Pagamentos valida o saldo e aciona o PSP externo, que confirma o resultado por webhook.'),
+      h('li',null,'O Banco de Dados (PostgreSQL) guarda dados pessoais, saldos e histórico. Todos os serviços usam a mesma conta de aplicação ("app_user").'),
+      h('li',null,'O Portal Admin (web, acessível pela internet) é usado por operadores para consultar clientes e estornar pagamentos. A equipe usa um login compartilhado ("backoffice").'),
+      h('li',null,'Dados de cartão ficam apenas no PSP; a OrbitaPay recebe tokens.'))),
+    h('div',null,h('h3',null,'Diagrama (DFD)'),dfd(),h('p',{class:'mut'},'Linhas tracejadas = fronteiras de confiança. Cruzar uma fronteira é onde dados e ataques mudam de mãos.'))),
+   h('details',null,h('summary',null,'Cola STRIDE (método)'),
+    h('table',{class:'st'},h('tr',null,h('th',null,'Letra'),h('th',null,'Ameaça'),h('th',null,'Propriedade violada'),h('th',null,'Pergunta-guia')),
+     ...Object.entries(CAT).map(([k,c])=>h('tr',null,h('td',null,k),h('td',null,`${c[0]} (${c[1]})`),h('td',null,c[2]),h('td',null,c[3]))))),
+   h('details',null,h('summary',null,'Como aplicar (STRIDE por elemento)'),h('ul',null,
+     h('li',null,'Processos (serviços, apps): podem sofrer as 6 categorias.'),h('li',null,'Repositórios de dados: Tampering, Repudiation, Information disclosure, Denial of service.'),
+     h('li',null,'Entidades externas: Spoofing e Repudiation.'),h('li',null,'Fluxos de dados: Tampering, Information disclosure, Denial of service.'),
+     h('li',null,'Dica: dê atenção especial a tudo que cruza uma fronteira de confiança.'))),
+   h('button',{onclick:()=>{S.tab=1;render();}},'Começar a modelar →'));
+}
+
+/* ===== STRIDE ===== */
+function stride(v){
+  v.append(h('h2',null,'1 - STRIDE: liste as ameaças por componente'),h('p',{class:'lead'},'Para cada componente, pergunte: "o que pode dar errado?" em cada categoria aplicável. Clique numa célula da matriz para pré-selecionar e cadastre a ameaça (o que o atacante faz e o impacto) e uma mitigação. Meta sugerida: cobrir o máximo de células com ameaças realistas.'));
+  const mx=h('table',{class:'mx'},h('tr',null,h('th',{class:'l'},'Elemento'),...Object.keys(CAT).map(k=>h('th',{title:CAT[k][1]},k))));
+  EL.forEach(e=>mx.append(h('tr',null,h('th',{class:'l'},e.n),...Object.keys(CAT).map(k=>{
+    if(!e.c.includes(k))return h('td',{class:'na'},'-');
+    const n=S.th.filter(t=>t.el===e.id&&t.cat===k).length;const sel=S.sel&&S.sel.el===e.id&&S.sel.cat===k;
+    return h('td',null,h('button',{class:'cell'+(n?' has':'')+(sel?' sel':''),'aria-label':`${e.n} ${CAT[k][1]}: ${n} ameaça(s)`,onclick:()=>{S.sel={el:e.id,cat:k};render();}},n||'·'));}))));
+  const selEl=h('select',{id:'fe','aria-label':'Elemento'},...EL.map(e=>h('option',{value:e.id,selected:S.sel&&S.sel.el===e.id?'':false},e.n)));
+  const selCat=h('select',{id:'fc','aria-label':'Categoria STRIDE'});
+  const fillCats=()=>{const e=EL.find(x=>x.id===selEl.value);const keep=S.sel&&S.sel.cat;selCat.replaceChildren(...e.c.split('').map(k=>h('option',{value:k,selected:k===keep?'':false},`${k} - ${CAT[k][1]}`)));};
+  selEl.addEventListener('change',()=>{S.sel={el:selEl.value,cat:null};fillCats();hint();});
+  const q=h('div',{class:'mut',id:'hint'});const hint=()=>{q.textContent=CAT[selCat.value]?'Pergunta-guia: '+CAT[selCat.value][3]:'';};selCat.addEventListener('change',hint);
+  const tx=h('textarea',{rows:'3',maxlength:'300',id:'ft',placeholder:'Ameaça: quem faz o quê e qual o impacto? (mín. 15 caracteres)'}),mt=h('textarea',{rows:'2',maxlength:'300',id:'fm',placeholder:'Mitigação sugerida (opcional)'});
+  const err=h('div',{class:'err',role:'alert'},S.msg);S.msg='';
+  const form=h('div',{class:'card'},h('b',null,'Nova ameaça'),h('label',{for:'fe'},'Elemento'),selEl,h('label',{for:'fc'},'Categoria'),selCat,q,h('label',{for:'ft'},'Ameaça'),tx,h('label',{for:'fm'},'Mitigação'),mt,err,
+    h('button',{onclick:()=>{const t=tx.value.trim();if(t.length<15){err.textContent='Descreva a ameaça com pelo menos 15 caracteres.';return;}if(S.th.length>=40){err.textContent='Limite de 40 ameaças.';return;}
+      S.th.push({id:++S.n,el:selEl.value,cat:selCat.value,t,m:mt.value.trim()});S.sel={el:selEl.value,cat:selCat.value};render();}},'Adicionar ameaça'));
+  fillCats();hint();
+  const list=h('div');if(!S.th.length)list.append(h('p',{class:'mut'},'Nenhuma ameaça ainda.'));
+  S.th.forEach(t=>{const star=S.top.includes(t.id);list.append(h('div',{class:'card'+(star?' top':'')},h('span',{class:'chip'},t.cat),h('b',null,elName(t.el)),h('div',null,t.t),t.m?h('div',{class:'mut'},'Mitigação: '+t.m):null,
+    h('div',{style:'margin-top:6px;display:flex;gap:6px'},h('button',{class:'sec',onclick:()=>{if(star)S.top=S.top.filter(x=>x!==t.id);else if(S.top.length<3)S.top.push(t.id);else{S.msg='Já são 3 no Top-3: remova uma antes.';}render();}},star?'★ Remover do Top-3':'☆ Marcar no Top-3'),
+      h('button',{class:'sec',onclick:()=>{S.th=S.th.filter(x=>x.id!==t.id);S.top=S.top.filter(x=>x!==t.id);delete S.dr[t.id];render();}},'Excluir'))));});
+  v.append(h('div',{class:'grid2'},h('div',null,h('h3',null,'Matriz (nº de ameaças por célula)'),mx,form),h('div',null,h('h3',null,`Suas ameaças (${S.th.length})`),list)));
+}
+
+/* ===== DREAD ===== */
+function dread(v){
+  v.append(h('h2',null,'2 - DREAD: pontue as 3 ameaças mais críticas'),h('p',{class:'lead'},'Na aba STRIDE, marque ☆ nas 3 ameaças que você considera mais críticas. Aqui, dê uma nota de 1 a 10 para cada critério. A média define o risco (Baixo < 4, Médio 4-6,9, Alto ≥ 7).'));
+  if(!S.top.length){v.append(h('div',{class:'warn'},'Você ainda não marcou nenhuma ameaça no Top-3.'));return;}
+  const rank=h('div',{class:'card'});
+  const upd=()=>{const arr=S.top.map(id=>({id,a:avg(S.dr[id]||[5,5,5,5,5])})).sort((a,b)=>b.a-a.a);rank.replaceChildren(h('b',null,'Ranking atual do seu Top-3'),h('ol',null,...arr.map(x=>{const t=S.th.find(y=>y.id===x.id);const b=band(x.a);return h('li',null,`${x.a.toFixed(1)} `,h('span',{class:b[1]},`(${b[0]})`),` - ${elName(t.el)} [${t.cat}]: ${t.t.slice(0,80)}${t.t.length>80?'...':''}`);})));};
+  S.top.forEach(id=>{const t=S.th.find(y=>y.id===id);const sc=S.dr[id]||(S.dr[id]=[5,5,5,5,5]);const out=h('span',{class:'score'});
+    const refresh=()=>{const a=avg(sc),b=band(a);out.textContent=a.toFixed(1)+' ';out.append(h('span',{class:b[1],style:'font-size:13px'},b[0]));};
+    const card=h('div',{class:'card top'},h('span',{class:'chip'},t.cat),h('b',null,elName(t.el)),h('div',null,t.t));
+    DREAD.forEach(([n,tip],i)=>{const val=h('span',null,String(sc[i]));card.append(h('div',{class:'sl',title:tip},h('label',null,n),h('input',{type:'range',min:'1',max:'10',value:String(sc[i]),'aria-label':n+': '+tip,oninput:e=>{sc[i]=+e.target.value;val.textContent=e.target.value;refresh();upd();}}),val));});
+    card.append(h('div',null,'Média DREAD: ',out));refresh();v.append(card);});
+  upd();v.append(rank,h('p',{class:'mut'},'Justifique mentalmente cada nota: por que Damage 9 e não 6? DREAD é subjetivo; o valor está na discussão sobre priorização.'));
+}
+
+/* ===== Comparar ===== */
+function compare(v){
+  v.append(h('h2',null,'3 - Compare com a análise de referência'));
+  if(S.th.length<5){v.append(h('div',{class:'warn'},'Cadastre pelo menos 5 ameaças na aba STRIDE antes de comparar (você ainda tem '+S.th.length+').'));return;}
+  if(!S.cmp){v.append(h('p',{class:'lead'},'A comparação mostra a referência completa. Só faça depois de esgotar as suas ideias.'),h('button',{onclick:()=>{S.cmp=true;render();}},'Ver comparação'));return;}
+  const have=new Set(S.th.map(t=>t.el+t.cat));const hit=REF.filter(r=>have.has(r[1]+r[2]));
+  v.append(h('p',{class:'lead'},`Você cobriu ${hit.length} de ${REF.length} ameaças-chave da referência (por componente × categoria). Sua lista pode conter ameaças válidas que não estão na referência: isso é bom, discuta com o professor.`));
+  v.append(h('h3',null,'Cobertura'));
+  REF.forEach(r=>{const ok=have.has(r[1]+r[2]);v.append(h('div',{class:'card'},h('span',{class:'chip '+(ok?'ok':'no')},ok?'✔ coberta':'✘ não coberta'),h('span',{class:'chip'},r[2]),h('b',null,elName(r[1])),h('div',null,r[3]),h('div',{class:'mut'},'Mitigação: '+r[4])));});
+  v.append(h('h3',null,'Seu Top-3 vs. referência'));
+  if(!S.top.length)v.append(h('p',{class:'mut'},'Você não marcou o Top-3.'));
+  let ov=0;
+  S.top.forEach(id=>{const t=S.th.find(y=>y.id===id);const sc=S.dr[id]||[5,5,5,5,5];const a=avg(sc);const r=REF.find(x=>x[1]===t.el&&x[2]===t.cat);
+    const inTop=r&&REF_TOP.includes(r[0]);if(inTop)ov++;
+    v.append(h('div',{class:'card top'},h('b',null,`${elName(t.el)} [${t.cat}]`),h('div',null,t.t),h('div',null,`Sua nota: ${a.toFixed(1)} (${sc.join('/')})`),
+      r?h('div',null,`Referência: ${avg(r[5]).toFixed(1)} (${r[5].join('/')}) `,h('span',{class:'chip '+(inTop?'ok':'')},inTop?'entre as mais críticas da referência':'risco menor na referência')):h('div',{class:'mut'},'Sem par direto na referência. Pode ser válida: argumente com evidência.')));});
+  v.append(h('div',{class:'card'},h('b',null,'Top da referência (maior média DREAD): '),REF_TOP.map(id=>{const r=REF.find(x=>x[0]===id);return `${elName(r[1])} [${r[2]}] ${avg(r[5]).toFixed(1)}`;}).join(' | '),h('p',null,`Seu Top-3 coincidiu com ${ov} delas. Notas muito diferentes não significam erro: DREAD é subjetivo. Muitos times hoje preferem CVSS ou o OWASP Risk Rating, mais objetivos.`)));
+}
+
+/* ===== Debrief e relatório ===== */
+function debrief(){const d=$('#dlg');d.replaceChildren(h('h2',null,'Debrief'),h('p',null,`Ameaças: ${S.th.length} | Células STRIDE preenchidas: ${cells()}/${TOTAL_CELLS} | Top-3: ${S.top.length}/3`),
+  h('h3',null,'Perguntas para discussão'),h('ol',null,
+   h('li',null,'Quais ameaças cruzam uma fronteira de confiança? Por que elas costumam ser as mais perigosas?'),
+   h('li',null,'Em qual componente o time mais "confiou" no cliente? O que muda se a validação for SEMPRE no servidor?'),
+   h('li',null,'Duas pessoas deram notas DREAD muito diferentes para a mesma ameaça. Como resolver? (critérios claros, calibração, alternativas como CVSS.)'),
+   h('li',null,'A especificação já continha 4 ou 5 "decisões de design" que viram ameaças (conta única no banco, login compartilhado, erro repassado ao cliente, token guardado no app). Qual custaria menos corrigir agora, no design, vs. depois, em produção?'),
+   h('li',null,'Para a ameaça mais crítica, qual é a mitigação mínima viável e como você testaria que ela funciona?'),
+   h('li',null,'O que ficou FORA deste modelo? (cadeia de suprimentos, ameaça interna, terceiros, físico...)')),
+  h('div',{style:'margin-top:12px'},h('button',{class:'sec',onclick:()=>d.close()},'Fechar')));d.showModal();}
+function report(){const who=$('#analyst').value.trim()||'(não informado)';
+  let m=`# Threat Model - OrbitaPay Mobile\n\nAnalista: ${who}\n\n## Ameaças (STRIDE)\n`;
+  S.th.forEach(t=>{m+=`- [${t.cat}] ${elName(t.el)}: ${t.t}${t.m?` | Mitigação: ${t.m}`:''}\n`;});
+  m+='\n## Top-3 (DREAD)\n';S.top.map(id=>({t:S.th.find(y=>y.id===id),s:S.dr[id]||[5,5,5,5,5]})).sort((a,b)=>avg(b.s)-avg(a.s)).forEach(x=>{m+=`- ${avg(x.s).toFixed(1)} (D${x.s[0]} R${x.s[1]} E${x.s[2]} A${x.s[3]} D${x.s[4]}) - ${elName(x.t.el)} [${x.t.cat}]: ${x.t.t}\n`;});
+  const b=new Blob([m],{type:'text/markdown'});const u=URL.createObjectURL(b);const l=h('a',{href:u,download:'threat-model.md'});document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+$('#bDeb').addEventListener('click',debrief);$('#bRep').addEventListener('click',report);
+$('#bRst').addEventListener('click',()=>{if(confirm('Reiniciar? Todo o progresso será apagado.')){fresh();render();}});
+render();
+</script>
+</body>
+</html>
