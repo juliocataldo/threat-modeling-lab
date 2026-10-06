@@ -14,7 +14,7 @@ header h1{font-size:16px;margin:0;margin-right:auto}header h1 small{color:var(--
 .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-align:center;min-width:92px}
 .kpi b{display:block;font-size:18px}.kpi span{color:var(--mut);font-size:11px}
 input[type=text],select,textarea{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;width:100%}
-header input{width:190px}
+header input[type=text]{width:190px}
 button{background:var(--acc);color:#04111f;border:0;border-radius:6px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
 button.sec{background:var(--panel2);color:var(--tx);border:1px solid var(--line)}
 button:disabled{opacity:.45;cursor:not-allowed}
@@ -30,6 +30,7 @@ details ul{margin:6px 0 2px;padding-left:18px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:860px){.grid2{grid-template-columns:1fr}}
 .card{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:var(--panel2)}
 .card.top{border-color:var(--warn)}
+.card>label{display:block;margin-top:6px}.card>b:first-child{display:block}
 .chip{display:inline-block;border-radius:10px;padding:0 8px;font-size:11px;border:1px solid var(--line);color:var(--mut);margin-right:4px}
 .chip.ok{color:var(--ok);border-color:var(--ok)}.chip.no{color:var(--bad);border-color:var(--bad)}
 .mut{color:var(--mut)}.good{color:var(--ok)}.badc{color:var(--bad)}.err{color:var(--bad);margin:6px 0}
@@ -60,6 +61,7 @@ table.st{width:100%;border-collapse:collapse}table.st td,table.st th{border-bott
   <div class="kpi"><b id="kCe">0/42</b><span>Células STRIDE</span></div>
   <div class="kpi"><b id="kTop">0/3</b><span>Top-3 DREAD</span></div>
   <button class="sec" id="bRep">Relatório</button>
+  <button class="sec" id="bJson" title="Resultado estruturado para o professor">Exportar .json</button>
   <button id="bDeb">Debrief</button>
   <button class="sec" id="bRst">Reiniciar</button>
 </header>
@@ -238,6 +240,12 @@ function report(){const who=$('#analyst').value.trim()||'(não informado)';
   S.th.forEach(t=>{m+=`- [${t.cat}] ${elName(t.el)}: ${t.t}${t.m?` | Mitigação: ${t.m}`:''}\n`;});
   m+='\n## Top-3 (DREAD)\n';S.top.map(id=>({t:S.th.find(y=>y.id===id),s:S.dr[id]||[5,5,5,5,5]})).sort((a,b)=>avg(b.s)-avg(a.s)).forEach(x=>{m+=`- ${avg(x.s).toFixed(1)} (D${x.s[0]} R${x.s[1]} E${x.s[2]} A${x.s[3]} D${x.s[4]}) - ${elName(x.t.el)} [${x.t.cat}]: ${x.t.t}\n`;});
   const b=new Blob([m],{type:'text/markdown'});const u=URL.createObjectURL(b);const l=h('a',{href:u,download:'threat-model.md'});document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+const T0=Date.now();
+function exportJson(lab,items,extra){const o={schema:1,lab,ts:new Date().toISOString(),mins:Math.round((Date.now()-T0)/60000),who:($('#analyst').value.trim()||null),items,extra:extra||{}};
+  const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const u=URL.createObjectURL(b);const l=h('a',{href:u,download:`resultado-${lab}.json`});document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+$('#bJson').addEventListener('click',()=>{const have=new Set(S.th.map(t=>t.el+t.cat));
+  const topScores=S.top.map(id=>{const t=S.th.find(y=>y.id===id);const r=REF.find(x=>x[1]===t.el&&x[2]===t.cat);return{par:r?r[0]:null,media:+avg(S.dr[id]||[5,5,5,5,5]).toFixed(1),ref:r?+avg(r[5]).toFixed(1):null,naReferenciaTop:!!(r&&REF_TOP.includes(r[0]))};});
+  exportJson('threat-model',REF.map(r=>({id:r[0],m:{coberta:have.has(r[1]+r[2])}})),{ameacas:S.th.length,celulas:cells(),top3:topScores,compararAberto:S.cmp});});
 $('#bDeb').addEventListener('click',debrief);$('#bRep').addEventListener('click',report);
 $('#bRst').addEventListener('click',()=>{if(confirm('Reiniciar? Todo o progresso será apagado.')){fresh();render();}});
 render();

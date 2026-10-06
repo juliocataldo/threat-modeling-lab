@@ -64,3 +64,22 @@ DREAD é **subjetivo**. Muitos times hoje usam alternativas como **CVSS** ou o *
 - Ambiente de **treino**: errar faz parte.
 - Discuta com a dupla, mas **registre o seu próprio modelo**.
 - Não compartilhe a análise de referência com quem ainda não terminou.
+
+## Objetivos de aprendizagem
+Ao final você será capaz de: **decompor** um sistema em elementos e fronteiras de confiança; **gerar ameaças** de forma sistemática com STRIDE; **priorizar** com DREAD; e **defender** a sua priorização com argumentos.
+
+## Entregando o resultado (opcional)
+Ao final, clique em **Exportar .json** e envie o arquivo ao professor. Ele agrega os resultados da turma para ver **quais conceitos precisam ser reforçados**; o nome/RM é opcional. O arquivo é só diagnóstico: não vale nota.
+
+## Série de labs (todos sem nota, 100% offline)
+| Lab | Repositório |
+|---|---|
+| Triagem de alertas (SOC) | https://github.com/juliocataldo/soc-lab |
+| Mini-SIEM: caça, detecção e resposta | https://github.com/juliocataldo/soc-lab (pasta `lab2-siem/`) |
+| Threat Modeling: STRIDE + DREAD | https://github.com/juliocataldo/threat-modeling-lab |
+| Supply Chain: revisão de dependências | https://github.com/juliocataldo/supply-chain-lab |
+
+## Para ler depois
+- Shostack, A. *Threat Modeling: Designing for Security* (Wiley, 2014)
+- OWASP Threat Modeling Process / Cookbook; OWASP Risk Rating Methodology
+- Kohnfelder & Garg, *The Threats to Our Products* (1999), origem do STRIDE
